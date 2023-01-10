@@ -301,36 +301,6 @@ namespace CatClub
             return output;
         }
 
-        static bool GetValidBool()
-        {
-            char answer = 'c';
-
-            while (answer != 'y' && answer != 'n')
-            {
-                Console.WriteLine("Are you sure? (y/n): ");
-                try
-                {
-
-                    answer = (char)Console.Read();
-                    Console.ReadLine();//Gets rid of pesky "". Don't want to do Console.ReadLine().Trim()[0]
-
-                }
-                catch (Exception ex)
-                {
-
-                    Console.WriteLine("Read failed with message: " + ex.Message);
-                }
-            }
-
-            if (answer == 'y')
-                return true;
-            return false;
-
-
-        }
-
-
-
     }
 
 
