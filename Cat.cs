@@ -8,31 +8,37 @@ using System.Threading.Tasks;
 
 namespace CatClub
 {
-    class Cat
+    public class Cat
     {
-        [BsonId]
+       // [BsonId]
         public ObjectId Id { get; set; }
-        public int cat_id { get; set; }
-        public string name { get; set; }
-        public double weight { get; set; }
-        public int age { get; set; }
-        public string[] colors { get; set; }
-        public string gender { get; set; }
+        [BsonElement("cat_id")]
+        public int CatId { get; set; }
+        [BsonElement("name")]
+        public string Name { get; set; }
+        [BsonElement("weight")]
+        public double Weight { get; set; }
+        [BsonElement("age")]
+        public int Age { get; set; }
+        [BsonElement("colors")]
+        public string[] Colors { get; set; }
+        [BsonElement("gender")]
+        public string Gender { get; set; }
 
         public Cat(int cat_id, string name, double weight, int age, string colors, string gender)
         {
             try
             {
 
-            this.cat_id = cat_id;
-            this.name = name;
-            this.weight = weight;
-            this.age = age;
-            
-            string[] color = colors.Split(',');
-            this.colors = color;
+                this.CatId = cat_id;
+                this.Name = name;
+                this.Weight = weight;
+                this.Age = age;
 
-            this.gender = gender;
+                string[] color = colors.Split(',');
+                this.Colors = color;
+
+                this.Gender = gender;
             }
             catch (Exception ex)
             {
@@ -45,12 +51,12 @@ namespace CatClub
         {
             string allColors = "";
 
-            foreach (var color in colors)
+            foreach (var color in Colors)
             {
                 allColors += color + " ";
             }
 
-            return $"Cat ID: {cat_id} \nName: {name} \nWeight: {weight} \nAge: {age} \nColors: {allColors} \nGender: {gender}";
+            return $"Cat ID: {CatId} \nName: {Name} \nWeight: {Weight} \nAge: {Age} \nColors: {allColors} \nGender: {Gender}";
         }
     }
 }

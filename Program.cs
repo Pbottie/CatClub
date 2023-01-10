@@ -2,15 +2,15 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 
+
 namespace CatClub
 {
     internal class Program
     {
         static void Main(string[] args)
         {
-            var dbClient = new MongoClient("mongodb+srv://kaami:F6YS1WxP5wCm4X3c@test.hzlhdoo.mongodb.net/test");
-            var database = dbClient.GetDatabase("CatClub");
-            var collection = database.GetCollection<BsonDocument>("Cats");
+
+            var catRepository = new CatRepository("mongodb+srv://supersecretuser:supersecretpassword@test.hzlhdoo.mongodb.net/test");
 
 
             int mainMenuChoice = 0;
@@ -23,19 +23,19 @@ namespace CatClub
                 switch (mainMenuChoice)
                 {
                     case 1:
-                        SelectCat(collection);
+                        SelectCat(catRepository);
                         break;
                     case 2:
-                        AddCat(collection);
+                        AddCat(catRepository);
                         break;
                     case 3:
-                        ListCats(collection);
+                        ListCats(catRepository);
                         break;
                     case 4:
-                        RemoveCat(collection);
+                        RemoveCat(catRepository);
                         break;
                     case 5:
-                        UpdateCat(collection);
+                        UpdateCat(catRepository);
                         break;
                     case 6:
                         Console.WriteLine("Exiting...");
@@ -70,26 +70,32 @@ namespace CatClub
 
         }
 
-        static void SelectCat(IMongoCollection<BsonDocument> collection)
+
+
+
+
+
+
+        static async void SelectCat(CatRepository cats)
         {
             Console.WriteLine();
             Console.WriteLine("Choose Cat ID");
 
             int catID;
-            FilterDefinition<BsonDocument> filter;
 
             if (Int32.TryParse(Console.ReadLine(), out catID))
             {
-                filter = Builders<BsonDocument>.Filter.Eq("cat_id", catID);
-                var catDocument = collection.Find(filter).FirstOrDefault();
 
-                if (catDocument == null)
+                var returned = cats.GetCatsByID(catID);
+                if (returned.Result.Count == 0)
                     Console.WriteLine("No cat with that Id was found.");
                 else
                 {
+                    foreach (var cat in returned.Result.ToList())
+                    {
+                        Console.WriteLine(cat);
+                    }
 
-                    var cat = BsonSerializer.Deserialize<Cat>(catDocument);
-                    Console.WriteLine(cat);
                 }
 
             }
@@ -101,10 +107,10 @@ namespace CatClub
 
         }
 
-        static void AddCat(IMongoCollection<BsonDocument> collection)
+        static void AddCat(CatRepository cats)
         {
             Console.WriteLine("Input Cat Data: ");
-            Cat cat;
+            Cat cat = null;
 
             try
             {
@@ -132,49 +138,43 @@ namespace CatClub
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error: " + ex);
-                throw;
+                Console.WriteLine("Error with last input: " + ex);
             }
 
             if (cat != null)
-                collection.InsertOne(cat.ToBsonDocument());
+                cats.InsertCat(cat);
 
 
 
         }
 
-        static void ListCats(IMongoCollection<BsonDocument> collection)
+        static void ListCats(CatRepository cats)
         {
-            var allCats = collection.Find(new BsonDocument()).ToList();
-
-            foreach (var catson in allCats)
+            var allCats = cats.GetAllCats().Result.ToList();
+            foreach (var cat in allCats)
             {
-                var cat = BsonSerializer.Deserialize<Cat>(catson);
                 Console.WriteLine(cat);
                 Console.WriteLine();
             }
         }
 
-        static void RemoveCat(IMongoCollection<BsonDocument> collection)
+        static void RemoveCat(CatRepository cats)
         {
             Console.WriteLine();
             Console.WriteLine("Choose Cat ID to delete");
 
             int catID;
-            FilterDefinition<BsonDocument> deleteFilter;
 
             if (Int32.TryParse(Console.ReadLine(), out catID))
             {
-                deleteFilter = Builders<BsonDocument>.Filter.Eq("cat_id", catID);
-                var catDocument = collection.Find(deleteFilter).FirstOrDefault();
 
-                if (catDocument == null)
-                    Console.WriteLine("No cat with that Id was found.");
+                var cat = cats.DeleteCatById(catID).Result;
+
+                if (cat)
+                    Console.WriteLine($"Cat with id: {catID} was deleted");
                 else
                 {
-                    var cat = BsonSerializer.Deserialize<Cat>(catDocument);
-                    collection.DeleteOne(deleteFilter);
-                    Console.WriteLine(cat + "\nWas deleted");
+                    Console.WriteLine("No cat with that Id was found.");
                 }
 
             }
@@ -183,57 +183,59 @@ namespace CatClub
 
         }
 
-        static void UpdateCat(IMongoCollection<BsonDocument> collection)
+        static void UpdateCat(CatRepository cats)
         {
             Console.WriteLine();
             Console.WriteLine("Choose Cat ID");
 
             int catID;
-            FilterDefinition<BsonDocument> updateFilter;
 
             if (Int32.TryParse(Console.ReadLine(), out catID))
             {
-                updateFilter = Builders<BsonDocument>.Filter.Eq("cat_id", catID);
-                var catDocument = collection.Find(updateFilter).FirstOrDefault();
-                var fields = catDocument.Count();
+                Console.Write("Field name: ");
+                var fieldName = Console.ReadLine();
+                Console.Write("Field value: ");
+                var fieldValue = Console.ReadLine();
 
-                if (catDocument == null)
-                    Console.WriteLine("No cat with that Id was found.");
+                var cat = cats.UpdateCat(catID, fieldName, fieldValue).Result;
+
+                if (cat)
+                    Console.WriteLine($"Cat with ID: {catID} was updated");
                 else
                 {
-                    Console.WriteLine("What would you like to update?");
+                    Console.WriteLine("No cat with that Id was found.");
 
 
-                    var enumTest = catDocument.Names;
-                    for (int i = 1; i < fields; i++)
-                    {
-                        Console.WriteLine($"{i}. {catDocument.GetElement(i)}");
-                    }
+                    //var enumTest = catDocument.Names;
+                    //for (int i = 1; i < fields; i++)
+                    //{
+                    //    Console.WriteLine($"{i}. {catDocument.GetElement(i)}");
+                    //}
 
-                    int input = GetValidInput(fields - 1);
-                    var updateName = catDocument.GetElement(input).Name;
+                    //int input = GetValidInput(fields - 1);
+                    //var updateName = catDocument.GetElement(input).Name;
 
-                    Console.Write($"Update {updateName}: ");
-                    if (catDocument.GetElement(input).Value.IsBsonArray)
-                    {
-                        Console.Write("(use , to seperate colors) ");
-                        BsonArray updateArray = new BsonArray();
-                        string[] strArr = Console.ReadLine().Split(',');
-                        foreach (var color in strArr)
-                        {
-                            updateArray.Add(color);
-                        }
-                        var update = Builders<BsonDocument>.Update.Set(updateName, updateArray);
-                        collection.UpdateOne(updateFilter, update);
+                    //Console.Write($"Update {updateName}: ");
+                    //if (catDocument.GetElement(input).Value.IsBsonArray)
+                    //{
+                    //    Console.Write("(use , to seperate colors) ");
+                    //    BsonArray updateArray = new BsonArray();
+                    //    string[] strArr = Console.ReadLine().Split(',');
+                    //    foreach (var color in strArr)
+                    //    {
+                    //        updateArray.Add(color);
+                    //    }
+                    //    var update = Builders<BsonDocument>.Update.Set(updateName, updateArray);
+                    //    collection.UpdateOne(updateFilter, update);
 
-                    }
-                    else
-                    {
-                        string updateValue = Console.ReadLine();
-                        var update = Builders<BsonDocument>.Update.Set(updateName, updateValue);
-                        collection.UpdateOne(updateFilter, update);
+                    //}
+                    //else
+                    //{
+                    //    string updateValue = Console.ReadLine();
+                    //    var update = Builders<BsonDocument>.Update.Set(updateName, updateValue);
+                    //    collection.UpdateOne(updateFilter, update);
 
-                    }
+                    //}
 
                 }
 
@@ -241,10 +243,6 @@ namespace CatClub
             else
                 Console.WriteLine("Invalid integer");
 
-
-
-            //Console.WriteLine("Update cat with id of 2");
-            //var updateFilter = Builders<BsonDocument>.Filter.Eq("cat_id", 2);
 
 
         }
@@ -308,6 +306,73 @@ namespace CatClub
 
 
         }
+
+
+
+    }
+
+
+    public class CatRepository
+    {
+
+        IMongoClient _client;
+        IMongoDatabase _database;
+        IMongoCollection<Cat> _catCollection;
+
+        public CatRepository(string connectionString)
+        {
+
+            _client = new MongoClient(connectionString);
+            _database = _client.GetDatabase("CatClub");
+            _catCollection = _database.GetCollection<Cat>("Cats");
+
+
+        }
+
+        public async Task InsertCat(Cat cat)
+        {
+            await _catCollection.InsertOneAsync(cat);
+
+        }
+
+        public async Task<List<Cat>> GetAllCats()
+        {
+            return await _catCollection.Find(new BsonDocument()).ToListAsync();
+        }
+
+        public async Task<List<Cat>> GetCatsByID(int fieldValue)
+        {
+            var filter = Builders<Cat>.Filter.Eq("cat_id", fieldValue);
+            var result = await _catCollection.Find(filter).ToListAsync();
+
+            return result;
+        }
+
+        public async Task<bool> UpdateCat(int id, string updateFieldName, string updateFieldValue)
+        {
+            var filter = Builders<Cat>.Filter.Eq("cat_id", id);
+
+
+
+
+            var update = Builders<Cat>.Update.Set(updateFieldName, updateFieldValue);
+            
+            var result = await _catCollection.UpdateOneAsync(filter, update);
+
+            return result.ModifiedCount != 0;
+        }
+        public async Task<bool> DeleteCatById(int id)
+        {
+            var filter = Builders<Cat>.Filter.Eq("cat_id", id);
+            var result = await _catCollection.DeleteOneAsync(filter);
+
+            return result.DeletedCount != 0;
+        }
+
+
+
+
+
 
 
 
