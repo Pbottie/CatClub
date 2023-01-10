@@ -1,7 +1,7 @@
 ﻿using MongoDB.Driver;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
-
+using System.Reflection;
 
 namespace CatClub
 {
@@ -54,6 +54,7 @@ namespace CatClub
 
         static int MainMenu()
         {
+            Console.WriteLine();
             Console.WriteLine("~~~~~~~~~~CatClub~~~~~~~~~~");
             Console.WriteLine("1. Select Cat");
             Console.WriteLine("2. Add Cat");
@@ -79,7 +80,7 @@ namespace CatClub
         static async void SelectCat(CatRepository cats)
         {
             Console.WriteLine();
-            Console.WriteLine("Choose Cat ID");
+            Console.Write("Choose Cat ID: ");
 
             int catID;
 
@@ -150,6 +151,7 @@ namespace CatClub
 
         static void ListCats(CatRepository cats)
         {
+            Console.WriteLine();
             var allCats = cats.GetAllCats().Result.ToList();
             foreach (var cat in allCats)
             {
@@ -192,50 +194,70 @@ namespace CatClub
 
             if (Int32.TryParse(Console.ReadLine(), out catID))
             {
-                Console.Write("Field name: ");
-                var fieldName = Console.ReadLine();
-                Console.Write("Field value: ");
-                var fieldValue = Console.ReadLine();
+                var cat = cats.GetCatsByID(catID);
 
-                var cat = cats.UpdateCat(catID, fieldName, fieldValue).Result;
 
-                if (cat)
-                    Console.WriteLine($"Cat with ID: {catID} was updated");
-                else
+                if (cat.Result.Count == 0)
                 {
                     Console.WriteLine("No cat with that Id was found.");
+                }
+                else
+                {
+                    var query = cat.Result.FirstOrDefault().GetType().GetFields(BindingFlags.Public |
+                                   BindingFlags.NonPublic |
+                                   BindingFlags.Instance);
+
+                    Console.WriteLine("Which field would you like to update?");
+                    string[] fields = new string[query.Length];
+
+                    for (int i = 1; i < query.Length; i++)
+                    {
+                        var field = query[i];
+                        string name = field.Name.Substring(1, field.Name.IndexOf('>') - 1);
+                        fields[i] = name.ToLower();
+                        Console.WriteLine(i + ". " + name);
+                    }
+                    int fieldChoice = GetValidInput(query.Length - 1);
+                    var fieldName = fields[fieldChoice];
+                    var fieldType = query[fieldChoice].FieldType.Name;
 
 
-                    //var enumTest = catDocument.Names;
-                    //for (int i = 1; i < fields; i++)
-                    //{
-                    //    Console.WriteLine($"{i}. {catDocument.GetElement(i)}");
-                    //}
 
-                    //int input = GetValidInput(fields - 1);
-                    //var updateName = catDocument.GetElement(input).Name;
+                    Console.Write("Field value: ");
+                    var value = Console.ReadLine();
 
-                    //Console.Write($"Update {updateName}: ");
-                    //if (catDocument.GetElement(input).Value.IsBsonArray)
-                    //{
-                    //    Console.Write("(use , to seperate colors) ");
-                    //    BsonArray updateArray = new BsonArray();
-                    //    string[] strArr = Console.ReadLine().Split(',');
-                    //    foreach (var color in strArr)
-                    //    {
-                    //        updateArray.Add(color);
-                    //    }
-                    //    var update = Builders<BsonDocument>.Update.Set(updateName, updateArray);
-                    //    collection.UpdateOne(updateFilter, update);
+                    bool updateCat = false;
 
-                    //}
-                    //else
-                    //{
-                    //    string updateValue = Console.ReadLine();
-                    //    var update = Builders<BsonDocument>.Update.Set(updateName, updateValue);
-                    //    collection.UpdateOne(updateFilter, update);
+                    try
+                    {
+                        switch (fieldType)
+                        {
+                            case "Int32":
+                                var intValue = Int32.Parse(value);
+                                updateCat = cats.UpdateCat(catID, fieldName, intValue).Result;
+                                break;
+                            case "String[]":
+                                var stringArrayValue = value.Split(',');
+                                updateCat = cats.UpdateCat(catID, fieldName, stringArrayValue).Result;
+                                break;
+                            case "Double":
+                                var fieldValue = Double.Parse(value);
+                                updateCat = cats.UpdateCat(catID, fieldName, fieldValue).Result;
+                                break;
+                            default:
+                                updateCat = cats.UpdateCat(catID, fieldName, value).Result;
+                                break;
+                        }
 
-                    //}
+                    }
+                    catch (Exception ex)
+                    {
+
+                        Console.WriteLine("Error: " + ex);
+                    }
+
+                    if (updateCat)
+                        Console.WriteLine($"Cat with ID: {catID} was updated");
 
                 }
 
@@ -348,19 +370,16 @@ namespace CatClub
             return result;
         }
 
-        public async Task<bool> UpdateCat(int id, string updateFieldName, string updateFieldValue)
+        public async Task<bool> UpdateCat<T>(int id, string updateFieldName, T updateFieldValue)
         {
             var filter = Builders<Cat>.Filter.Eq("cat_id", id);
-
-
-
-
             var update = Builders<Cat>.Update.Set(updateFieldName, updateFieldValue);
-            
+
             var result = await _catCollection.UpdateOneAsync(filter, update);
 
             return result.ModifiedCount != 0;
         }
+
         public async Task<bool> DeleteCatById(int id)
         {
             var filter = Builders<Cat>.Filter.Eq("cat_id", id);
@@ -368,13 +387,6 @@ namespace CatClub
 
             return result.DeletedCount != 0;
         }
-
-
-
-
-
-
-
 
     }
 }

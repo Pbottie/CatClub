@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 
 namespace CatClub
 {
+
     public class Cat
     {
-       // [BsonId]
         public ObjectId Id { get; set; }
         [BsonElement("cat_id")]
         public int CatId { get; set; }
