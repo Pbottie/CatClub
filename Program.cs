@@ -163,7 +163,7 @@ namespace CatClub
         static void RemoveCat(CatRepository cats)
         {
             Console.WriteLine();
-            Console.WriteLine("Choose Cat ID to delete");
+            Console.Write("Choose Cat ID to delete: ");
 
             int catID;
 
@@ -188,7 +188,7 @@ namespace CatClub
         static void UpdateCat(CatRepository cats)
         {
             Console.WriteLine();
-            Console.WriteLine("Choose Cat ID");
+            Console.Write("Choose Cat ID: ");
 
             int catID;
 
@@ -222,8 +222,11 @@ namespace CatClub
                     var fieldType = query[fieldChoice].FieldType.Name;
 
 
+                    if (fieldType != "String[]")
+                        Console.Write("Field value: ");
+                    else
+                        Console.Write("Field value (separate with , ): ");
 
-                    Console.Write("Field value: ");
                     var value = Console.ReadLine();
 
                     bool updateCat = false;

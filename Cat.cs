@@ -13,7 +13,7 @@ namespace CatClub
     {
         public ObjectId Id { get; set; }
         [BsonElement("cat_id")]
-        public int CatId { get; set; }
+        public int Cat_Id { get; set; }
         [BsonElement("name")]
         public string Name { get; set; }
         [BsonElement("weight")]
@@ -30,7 +30,7 @@ namespace CatClub
             try
             {
 
-                this.CatId = cat_id;
+                this.Cat_Id = cat_id;
                 this.Name = name;
                 this.Weight = weight;
                 this.Age = age;
@@ -56,7 +56,7 @@ namespace CatClub
                 allColors += color + " ";
             }
 
-            return $"Cat ID: {CatId} \nName: {Name} \nWeight: {Weight} \nAge: {Age} \nColors: {allColors} \nGender: {Gender}";
+            return $"Cat ID: {Cat_Id} \nName: {Name} \nWeight: {Weight} \nAge: {Age} \nColors: {allColors} \nGender: {Gender}";
         }
     }
 }
